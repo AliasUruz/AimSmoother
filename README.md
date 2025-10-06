@@ -2,15 +2,17 @@
 
 **Disclaimer:** This is a proof-of-concept project and not a finished product. It is intended for educational and experimental purposes. Use at your own risk.
 
-**AimSmoother** is an open-source application for Windows that applies a real-time smoothing filter to mouse movement. The goal is to correct involuntary hand tremors, providing a more stable and precise aim in games without compromising the ability to make fast, intentional movements.
+**AimSmoother** is an open-source application for Windows that applies a real-time smoothing filter to mouse movement. The goal is to correct involuntary hand tremors, providing a more stable and precise aim in games without compromising the ability to make fast, intentional movements. This tool is primarily designed for gamers but can be used by anyone who needs a smoother mouse experience.
 
 ## Features
 
 ### Current (MVP)
 
-*   **Adaptive Smoothing:** Uses an Exponential Moving Average (EMA) algorithm that adjusts to the mouse speed, applying more smoothing to slow movements (tremors) and less to fast movements.
+*   **Advanced Adaptive Smoothing:** Utilizes a sophisticated two-stage filtering system:
+    1.  **Tremor Guard:** A pre-filter that uses a deadzone to eliminate small, unintentional movements (jitter) and applies extra damping to very slow movements.
+    2.  **Adaptive EMA:** An Exponential Moving Average (EMA) filter that dynamically adjusts the smoothing factor based on the mouse speed. More smoothing is applied to slow movements and less to fast movements.
 *   **Global Mouse Hook:** Intercepts mouse movement throughout the operating system, working with any game or application.
-*   **JSON Configuration:** Allows for easy adjustment of smoothing parameters through a `defaults.json` file.
+*   **JSON Configuration:** Allows for easy adjustment of all smoothing parameters through a `defaults.json` file.
 *   **Hotkeys:** Enable or disable smoothing at any time with a key combination (default: `Ctrl+Alt+S`).
 *   **Latency Profiler:** Integrated tool to measure the performance impact of the application.
 
@@ -24,13 +26,15 @@
 
 ## How it Works
 
-AimSmoother operates in three main stages:
+AimSmoother operates in a three-stage pipeline designed for minimal latency:
 
-1.  **Hook:** Uses the Windows API (`SetWindowsHookExA`) to intercept raw mouse movement data at a low level.
-2.  **Process:** An adaptive smoothing algorithm calculates the new cursor position. The smoothing is adaptive, based on the current mouse speed, ensuring that fast movements are not negatively affected.
-3.  **Inject:** The smoothed movement is then injected back into the system, replacing the original movement.
+1.  **Hook:** The `win_hook.py` module uses the Windows API (`SetWindowsHookExA`) to intercept raw mouse movement data at a low level.
+2.  **Process:** The captured data is then processed by a two-stage filtering system:
+    *   **`tremor.py` (Tremor Guard):** This pre-filter first analyzes the movement. If the movement is very small and slow, it's considered jitter and discarded. If it's a slow, intentional movement, a damping factor is calculated.
+    *   **`smoothing.py` (Adaptive EMA):** The main smoothing filter receives the (potentially modified) mouse data. It calculates the mouse speed and uses it to linearly interpolate a smoothing factor (`alpha`) between a minimum and maximum value. This adaptive `alpha`, combined with the damping factor from the Tremor Guard, is used in an EMA formula to produce the final, smoothed mouse coordinates.
+3.  **Inject:** The `injector.py` module takes the smoothed coordinates and uses the Windows API (`SendInput`) to inject them back into the system, replacing the original, shaky movement.
 
-This process is optimized for the lowest possible latency, ensuring a fluid and responsive experience.
+This entire process is orchestrated by `__main__.py`, which also handles loading settings from `config/defaults.json` and managing hotkeys.
 
 ## Getting Started
 
@@ -59,15 +63,19 @@ To start the application, run the following command in the terminal:
 python -m src
 ```
 
-The application will run in the background. You can use the `Ctrl+Alt+S` hotkey to enable or disable smoothing. To close the application, press `Ctrl+C` in the terminal.
+The application will run in the background. You can use the `Ctrl+Alt+S` hotkey to enable or disable smoothing. To close the. application, press `Ctrl+C` in the terminal.
 
 ## Configuration
 
-You can customize the smoothing parameters by editing the `config/defaults.json` file.
+You can customize the smoothing parameters by editing the `config/defaults.json` file. The key parameters are found in the `smoothing_params` and `tremor_params` objects:
 
-*   `smoothing_factor_slow`: Smoothing factor for slow movements (higher values = smoother).
-*   `smoothing_factor_fast`: Smoothing factor for fast movements (lower values = less smoothing).
-*   `speed_threshold`: The speed threshold that defines a movement as "fast".
+*   **`tremor_params`:**
+    *   `jitter_deadzone_px`: The radius (in pixels) within which slow movements are considered jitter and ignored.
+    *   `jitter_speed_max`: The maximum speed for a movement to be considered for the deadzone.
+    *   `extra_damp_factor`: The amount of extra damping to apply to very slow movements.
+*   **`smoothing_params`:**
+    *   `v_min`, `v_max`: The speed range (in pixels/second) used to determine the smoothing factor. Movements slower than `v_min` get maximum smoothing, and movements faster than `v_max` get minimum smoothing.
+    *   `alpha_min`, `alpha_max`: The minimum and maximum smoothing factors (alpha). A lower alpha means more smoothing. `alpha_max` should be close to 1.0 to allow for fast, unfiltered movements.
 
 ## Roadmap
 

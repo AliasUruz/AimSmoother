@@ -11,51 +11,57 @@ AimSmoother operates based on a linear, low-latency data flow. The architecture 
 The data flow can be represented as follows:
 
 ```
-[Mouse Input] -> [1. Hook Agent] -> [2. Smoothing Agent] -> [3. Injection Agent] -> [Operating System]
-      ^
-      |
-[4. Hotkey Agent]
-      |
-      v
-[Activation Control]
+[Mouse Input] -> [1. Hook Agent] -> [2. Tremor Guard] -> [3. Smoothing Agent] -> [4. Injection Agent] -> [OS]
+                                          ^
+                                          |
+                                    [5. Hotkey Agent]
+                                          |
+                                          v
+                                  [Activation Control]
 ```
 
 ## The Agents
 
 ### 1. Hook Agent (`win_hook.py`)
 
-*   **Responsibility:** Intercept mouse movement throughout the system.
-*   **Implementation:** Uses the `SetWindowsHookExA` function from the Windows API to register a callback that is called whenever the mouse moves.
-*   **Functioning:** This is the entry point for raw mouse data into the system. It captures the cursor's `(x, y)` coordinates and passes them to the next agent in the pipeline.
+*   **Responsibility:** To intercept all raw mouse movement events system-wide.
+*   **Implementation:** Uses the `SetWindowsHookExA` function from the Windows API to register a low-level mouse hook (`WH_MOUSE_LL`). This ensures that it captures mouse data before most applications.
+*   **Functioning:** This is the entry point for raw mouse data into the system. It captures the cursor's delta movements `(dx, dy)` and the time since the last event `(dt)`. It then passes this data to the next agent in the pipeline. If smoothing is disabled via the hotkey, this agent simply calls the next hook in the chain, bypassing the smoothing pipeline entirely.
 
-### 2. Smoothing Agent (`smoothing.py`)
+### 2. Tremor Guard (`tremor.py`)
 
-*   **Responsibility:** Apply the adaptive smoothing algorithm.
-*   **Implementation:** Contains the logic for the Exponential Moving Average (EMA). The agent maintains an internal state of the previous mouse position to calculate the speed and adjust the smoothing factor.
-*   **Functioning:** Receives the raw coordinates from the Hook Agent. Based on the movement speed, it applies a higher or lower smoothing factor, calculating the new smoothed position. The goal is to filter out tremor (small, fast movements) without adding a noticeable delay to intentional movements.
+*   **Responsibility:** To act as a pre-filter, distinguishing between unwanted jitter and intentional slow movements.
+*   **Implementation:** The `TremorGuard` class implements a deadzone and an extra damping mechanism.
+*   **Functioning:** This agent receives the raw `(dx, dy, dt)` from the Hook Agent. It performs two checks:
+    1.  **Deadzone:** It calculates the speed and magnitude of the movement. If the speed is below `jitter_speed_max` and the magnitude is within `jitter_deadzone_px`, the movement is classified as noise, and the deltas are zeroed out.
+    2.  **Extra Damping:** For movements that are very slow but intentional (i.e., outside the deadzone), it calculates a `gain` factor. This factor is less than 1.0 and will be used by the main smoothing agent to apply even more aggressive smoothing.
+    The processed deltas and the `gain` factor are then passed to the Smoothing Agent.
 
-### 3. Injection Agent (`injector.py`)
+### 3. Smoothing Agent (`smoothing.py`)
 
-*   **Responsibility:** Inject the smoothed movement back into the system.
-*   **Implementation:** Uses the `SendInput` function from the Windows API to simulate mouse movement.
-*   **Functioning:** Receives the smoothed coordinates from the Smoothing Agent and sends them to the operating system as if they were the original mouse input. This effectively replaces the irregular movement with the filtered movement.
+*   **Responsibility:** To apply the core adaptive smoothing algorithm.
+*   **Implementation:** The `AdaptiveEMA` class uses an Exponential Moving Average filter whose smoothing factor is dynamically adjusted based on velocity.
+*   **Functioning:** This agent receives the data from the Tremor Guard. It calculates the current mouse speed and uses this value to determine the appropriate smoothing factor, `alpha`. This is done by linearly interpolating between a minimum alpha (`alpha_min`, for slow speeds) and a maximum alpha (`alpha_max`, for high speeds), based on where the current speed falls between `v_min` and `v_max`. The final `alpha` is then multiplied by the `gain` from the Tremor Guard for additional damping. The EMA formula is then applied to the `dx` and `dy` values separately, resulting in a smoothed output.
 
-### 4. Hotkey Agent (`hotkeys.py`)
+### 4. Injection Agent (`injector.py`)
 
-*   **Responsibility:** Allow the user to enable or disable smoothing.
-*   **Implementation:** Monitors the keyboard for a specific key combination (e.g., `Ctrl+Alt+S`).
-*   **Functioning:** When the hotkey is pressed, it toggles a global state that is checked by the Hook Agent. If smoothing is disabled, the Hook Agent simply passes the raw mouse data to the system without sending it to the Smoothing Agent.
+*   **Responsibility:** To inject the final, smoothed mouse movement back into the operating system.
+*   **Implementation:** Uses the `SendInput` function from the Windows API to create a synthetic mouse input event.
+*   **Functioning:** This is the final stage of the pipeline. It receives the smoothed `(dx, dy)` from the Smoothing Agent and sends it to the OS. This new movement event replaces the original one that was intercepted by the Hook Agent.
+
+### 5. Hotkey Agent (`hotkeys.py`)
+
+*   **Responsibility:** To provide a simple, system-wide toggle for the smoothing functionality.
+*   **Implementation:** Monitors keyboard input for a specific key combination (e.g., `Ctrl+Alt+S`).
+*   **Functioning:** When the hotkey is detected, it flips a boolean flag in the main orchestrator. This flag is checked by the Hook Agent to determine whether to activate the smoothing pipeline or to pass the mouse input through without modification.
 
 ### Other Components
 
-*   **`__main__.py` (Orchestrator):**
-    *   Initializes all agents and connects them.
-    *   Loads the configuration from `defaults.json`.
-    *   Starts the Windows message loop, which keeps the application running and allows the hooks to work.
+*   **`__main__.py` (Orchestrator):** The central nervous system of the application. It is responsible for:
+    *   Reading the `config/defaults.json` file to load all parameters.
+    *   Instantiating all the agents.
+    *   Connecting the agents in the correct pipeline order.
+    *   Initializing the hotkey listener.
+    *   Starting the Windows message loop, which is required for the hook to function.
 
-*   **`profiler.py` (Latency Profiler):**
-    *   A diagnostic agent that measures the time elapsed between capturing the movement (Hook) and its injection (Injection).
-    *   It is essential to ensure that the smoothing process does not introduce a noticeable latency that could harm the gaming experience.
-
-*   **`config/defaults.json` (Configuration):**
-    *   A configuration file that allows the end-user (or future agents, such as the control panel) to adjust the parameters of the Smoothing Agent without needing to change the source code.
+*   **`profiler.py` (Latency Profiler):** A diagnostic tool that wraps the processing pipeline (from hook to injection) and measures the execution time. This is crucial for development and debugging to ensure that the smoothing process does not introduce any noticeable input lag.
