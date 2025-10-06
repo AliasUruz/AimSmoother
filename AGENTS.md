@@ -1,59 +1,61 @@
-# Arquitetura e Agentes do AimSmoother
+# AimSmoother Architecture and Agents
 
-Este documento descreve a arquitetura do AimSmoother, detalhando cada um dos seus componentes (ou "agentes") e como eles interagem para fornecer a funcionalidade de suavização de mira.
+**Disclaimer:** This document describes the architecture of a proof-of-concept project. It is intended for educational and experimental purposes.
 
-## Visão Geral da Arquitetura
+This document describes the architecture of AimSmoother, detailing each of its components (or "agents") and how they interact to provide the aim smoothing functionality.
 
-O AimSmoother opera com base em um fluxo de dados linear e de baixa latência. A arquitetura é projetada para ser modular, com cada componente tendo uma responsabilidade única.
+## Architectural Overview
 
-O fluxo de dados pode ser representado da seguinte forma:
+AimSmoother operates based on a linear, low-latency data flow. The architecture is designed to be modular, with each component having a unique responsibility.
+
+The data flow can be represented as follows:
 
 ```
-[Entrada do Mouse] -> [1. Hook Agent] -> [2. Smoothing Agent] -> [3. Injection Agent] -> [Sistema Operacional]
-        ^
-        |
+[Mouse Input] -> [1. Hook Agent] -> [2. Smoothing Agent] -> [3. Injection Agent] -> [Operating System]
+      ^
+      |
 [4. Hotkey Agent]
-        |
-        v
-[Controle de Ativação]
+      |
+      v
+[Activation Control]
 ```
 
-## Os Agentes
+## The Agents
 
 ### 1. Hook Agent (`win_hook.py`)
 
-*   **Responsabilidade:** Interceptar o movimento do mouse em todo o sistema.
-*   **Implementação:** Utiliza a função `SetWindowsHookExA` da API do Windows para registrar um *callback* que é chamado sempre que o mouse se move.
-*   **Funcionamento:** Este é o ponto de entrada dos dados brutos do mouse no sistema. Ele captura as coordenadas `(x, y)` do cursor e as passa para o próximo agente no pipeline.
+*   **Responsibility:** Intercept mouse movement throughout the system.
+*   **Implementation:** Uses the `SetWindowsHookExA` function from the Windows API to register a callback that is called whenever the mouse moves.
+*   **Functioning:** This is the entry point for raw mouse data into the system. It captures the cursor's `(x, y)` coordinates and passes them to the next agent in the pipeline.
 
 ### 2. Smoothing Agent (`smoothing.py`)
 
-*   **Responsabilidade:** Aplicar o algoritmo de suavização adaptativa.
-*   **Implementação:** Contém a lógica para a Média Móvel Exponencial (EMA). O agente mantém um estado interno da posição anterior do mouse para calcular a velocidade e ajustar o fator de suavização.
-*   **Funcionamento:** Recebe as coordenadas brutas do *Hook Agent*. Com base na velocidade do movimento, ele aplica um fator de suavização maior ou menor, calculando a nova posição suavizada. O objetivo é filtrar o tremor (movimentos pequenos e rápidos) sem adicionar um atraso perceptível aos movimentos intencionais.
+*   **Responsibility:** Apply the adaptive smoothing algorithm.
+*   **Implementation:** Contains the logic for the Exponential Moving Average (EMA). The agent maintains an internal state of the previous mouse position to calculate the speed and adjust the smoothing factor.
+*   **Functioning:** Receives the raw coordinates from the Hook Agent. Based on the movement speed, it applies a higher or lower smoothing factor, calculating the new smoothed position. The goal is to filter out tremor (small, fast movements) without adding a noticeable delay to intentional movements.
 
 ### 3. Injection Agent (`injector.py`)
 
-*   **Responsabilidade:** Injetar o movimento suavizado de volta no sistema.
-*   **Implementação:** Utiliza a função `SendInput` da API do Windows para simular um movimento do mouse.
-*   **Funcionamento:** Recebe as coordenadas suavizadas do *Smoothing Agent* e as envia para o sistema operacional como se fossem a entrada original do mouse. Isso efetivamente substitui o movimento irregular pelo movimento filtrado.
+*   **Responsibility:** Inject the smoothed movement back into the system.
+*   **Implementation:** Uses the `SendInput` function from the Windows API to simulate mouse movement.
+*   **Functioning:** Receives the smoothed coordinates from the Smoothing Agent and sends them to the operating system as if they were the original mouse input. This effectively replaces the irregular movement with the filtered movement.
 
 ### 4. Hotkey Agent (`hotkeys.py`)
 
-*   **Responsabilidade:** Permitir que o usuário ative ou desative a suavização.
-*   **Implementação:** Monitora o teclado para uma combinação de teclas específica (ex: `Ctrl+Alt+S`).
-*   **Funcionamento:** Quando a hotkey é pressionada, ela alterna um estado global que é verificado pelo *Hook Agent*. Se a suavização estiver desativada, o *Hook Agent* simplesmente passa os dados brutos do mouse para o sistema sem enviá-los ao *Smoothing Agent*.
+*   **Responsibility:** Allow the user to enable or disable smoothing.
+*   **Implementation:** Monitors the keyboard for a specific key combination (e.g., `Ctrl+Alt+S`).
+*   **Functioning:** When the hotkey is pressed, it toggles a global state that is checked by the Hook Agent. If smoothing is disabled, the Hook Agent simply passes the raw mouse data to the system without sending it to the Smoothing Agent.
 
-### Outros Componentes
+### Other Components
 
-*   **`__main__.py` (Orquestrador):**
-    *   Inicializa todos os agentes e os conecta.
-    *   Carrega a configuração do `defaults.json`.
-    *   Inicia o loop de mensagens do Windows, que mantém o aplicativo em execução e permite que os hooks funcionem.
+*   **`__main__.py` (Orchestrator):**
+    *   Initializes all agents and connects them.
+    *   Loads the configuration from `defaults.json`.
+    *   Starts the Windows message loop, which keeps the application running and allows the hooks to work.
 
-*   **`profiler.py` (Profiler de Latência):**
-    *   Um agente de diagnóstico que mede o tempo decorrido entre a captura do movimento (Hook) e a sua injeção (Injection).
-    *   É essencial para garantir que o processo de suavização não introduza uma latência perceptível que possa prejudicar a experiência de jogo.
+*   **`profiler.py` (Latency Profiler):**
+    *   A diagnostic agent that measures the time elapsed between capturing the movement (Hook) and its injection (Injection).
+    *   It is essential to ensure that the smoothing process does not introduce a noticeable latency that could harm the gaming experience.
 
-*   **`config/defaults.json` (Configuração):**
-    *   Um arquivo de configuração que permite ao usuário final (ou a futuros agentes, como o painel de controle) ajustar os parâmetros do *Smoothing Agent* sem precisar alterar o código-fonte.
+*   **`config/defaults.json` (Configuration):**
+    *   A configuration file that allows the end-user (or future agents, such as the control panel) to adjust the parameters of the Smoothing Agent without needing to change the source code.

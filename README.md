@@ -1,84 +1,86 @@
-# AimSmoother: Suavizador de Mira Adaptativo para Windows
+# AimSmoother: Adaptive Aim Smoother for Windows
 
-**AimSmoother** é um aplicativo de código aberto para Windows que aplica um filtro de suavização em tempo real ao movimento do mouse. O objetivo é corrigir tremores involuntários da mão, proporcionando uma mira mais estável e precisa em jogos, sem comprometer a capacidade de realizar movimentos rápidos e intencionais.
+**Disclaimer:** This is a proof-of-concept project and not a finished product. It is intended for educational and experimental purposes. Use at your own risk.
 
-## Funcionalidades
+**AimSmoother** is an open-source application for Windows that applies a real-time smoothing filter to mouse movement. The goal is to correct involuntary hand tremors, providing a more stable and precise aim in games without compromising the ability to make fast, intentional movements.
 
-### Atuais (MVP)
+## Features
 
-*   **Suavização Adaptativa:** Utiliza um algoritmo de Média Móvel Exponencial (EMA) que se ajusta à velocidade do mouse, aplicando mais suavização a movimentos lentos (tremores) e menos a movimentos rápidos.
-*   **Hook Global de Mouse:** Intercepta o movimento do mouse em todo o sistema operacional, funcionando com qualquer jogo ou aplicativo.
-*   **Configuração via JSON:** Permite ajustar facilmente os parâmetros de suavização através de um arquivo `defaults.json`.
-*   **Hotkeys:** Ative ou desative a suavização a qualquer momento com uma combinação de teclas (padrão: `Ctrl+Alt+S`).
-*   **Profiler de Latência:** Ferramenta integrada para medir o impacto de performance do aplicativo.
+### Current (MVP)
 
-### Planejadas (Roadmap)
+*   **Adaptive Smoothing:** Uses an Exponential Moving Average (EMA) algorithm that adjusts to the mouse speed, applying more smoothing to slow movements (tremors) and less to fast movements.
+*   **Global Mouse Hook:** Intercepts mouse movement throughout the operating system, working with any game or application.
+*   **JSON Configuration:** Allows for easy adjustment of smoothing parameters through a `defaults.json` file.
+*   **Hotkeys:** Enable or disable smoothing at any time with a key combination (default: `Ctrl+Alt+S`).
+*   **Latency Profiler:** Integrated tool to measure the performance impact of the application.
 
-*   **Assistente de Calibração Guiada:** Uma interface para ajudar o usuário a encontrar as configurações ideais de forma automática.
-*   **Painel de Controle em Tempo Real:** Uma GUI para ajustar os parâmetros de suavização e visualizar o gráfico de resposta do mouse.
-*   **Blacklist de Processos:** Impedir que o aplicativo funcione com jogos específicos que possam ter políticas anti-cheat restritivas.
-*   **Integração com a Bandeja do Sistema e Inicialização com o Windows.**
-*   **Empacotamento como um executável autônomo.**
+### Planned (Roadmap)
 
-## Como Funciona
+*   **Guided Calibration Wizard:** A UI to help the user find the ideal settings automatically.
+*   **Real-Time Control Panel:** A GUI to adjust smoothing parameters and visualize the mouse response graph.
+*   **Process Blacklist:** Prevent the application from working with specific games that may have restrictive anti-cheat policies.
+*   **System Tray Integration and Start with Windows.**
+*   **Packaging as a standalone executable.**
 
-O AimSmoother opera em três estágios principais:
+## How it Works
 
-1.  **Hook:** Utiliza a API do Windows (`SetWindowsHookExA`) para interceptar os dados brutos de movimento do mouse em baixo nível.
-2.  **Processamento:** Um algoritmo de suavização calcula a nova posição do cursor. A suavização é adaptativa, baseada na velocidade atual do mouse, garantindo que movimentos rápidos não sejam afetados negativamente.
-3.  **Injeção:** O movimento suavizado é então injetado de volta no sistema, substituindo o movimento original.
+AimSmoother operates in three main stages:
 
-Este processo é otimizado para ter a menor latência possível, garantindo uma experiência fluida e responsiva.
+1.  **Hook:** Uses the Windows API (`SetWindowsHookExA`) to intercept raw mouse movement data at a low level.
+2.  **Process:** An adaptive smoothing algorithm calculates the new cursor position. The smoothing is adaptive, based on the current mouse speed, ensuring that fast movements are not negatively affected.
+3.  **Inject:** The smoothed movement is then injected back into the system, replacing the original movement.
 
-## Começando
+This process is optimized for the lowest possible latency, ensuring a fluid and responsive experience.
 
-### Pré-requisitos
+## Getting Started
+
+### Prerequisites
 
 *   Python 3.x
 
-### Instalação
+### Installation
 
-1.  Clone o repositório:
+1.  Clone the repository:
     ```bash
-    git clone https://github.com/seu-usuario/AimSmoother.git
+    git clone https://github.com/your-username/AimSmoother.git
     cd AimSmoother
     ```
 
-2.  Instale as dependências:
+2.  Install the dependencies:
     ```bash
     pip install -r requirements.txt
     ```
 
-### Execução
+### Execution
 
-Para iniciar o aplicativo, execute o seguinte comando no terminal:
+To start the application, run the following command in the terminal:
 
 ```bash
 python -m src
 ```
 
-O aplicativo será executado em segundo plano. Você pode usar a hotkey `Ctrl+Alt+S` para ativar ou desativar a suavização. Para fechar o aplicativo, pressione `Ctrl+C` no terminal.
+The application will run in the background. You can use the `Ctrl+Alt+S` hotkey to enable or disable smoothing. To close the application, press `Ctrl+C` in the terminal.
 
-## Configuração
+## Configuration
 
-Você pode personalizar os parâmetros de suavização editando o arquivo `config/defaults.json`.
+You can customize the smoothing parameters by editing the `config/defaults.json` file.
 
-*   `smoothing_factor_slow`: Fator de suavização para movimentos lentos (valores maiores = mais suave).
-*   `smoothing_factor_fast`: Fator de suavização para movimentos rápidos (valores menores = menos suave).
-*   `speed_threshold`: O limite de velocidade que define um movimento como "rápido".
+*   `smoothing_factor_slow`: Smoothing factor for slow movements (higher values = smoother).
+*   `smoothing_factor_fast`: Smoothing factor for fast movements (lower values = less smoothing).
+*   `speed_threshold`: The speed threshold that defines a movement as "fast".
 
 ## Roadmap
 
-O desenvolvimento do AimSmoother está dividido nos seguintes marcos:
+The development of AimSmoother is divided into the following milestones:
 
-*   **v0.2 - O App Inteligente:** Foco em usabilidade e segurança, com a implementação do assistente de calibração e da blacklist de processos.
-*   **v0.3 - A Interface de Controle:** Criação de um painel de controle em tempo real para personalização avançada.
-*   **v1.0 - O Produto Polido:** Transformar o script em um aplicativo de desktop completo, com instalador, ícone na bandeja do sistema e inicialização com o Windows.
+*   **v0.2 - The Smart App:** Focus on usability and security, with the implementation of the calibration wizard and process blacklist.
+*   **v0.3 - The Control Interface:** Creation of a real-time control panel for advanced customization.
+*   **v1.0 - The Polished Product:** Transform the script into a complete desktop application, with an installer, system tray icon, and startup with Windows.
 
-## Contribuição
+## Contributing
 
-Contribuições são bem-vindas! Se você tem ideias para novas funcionalidades, melhorias ou correções de bugs, sinta-se à vontade para abrir uma *issue* ou enviar um *pull request*.
+Contributions are welcome! If you have ideas for new features, improvements, or bug fixes, feel free to open an *issue* or submit a *pull request*.
 
-## Licença
+## License
 
-Este projeto está licenciado sob a [Licença MIT](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
