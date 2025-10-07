@@ -15,12 +15,12 @@
 *   **JSON Configuration:** Allows for easy adjustment of all smoothing parameters through a `defaults.json` file.
 *   **Hotkeys:** Enable or disable smoothing at any time with a key combination (default: `Ctrl+Alt+S`).
 *   **Latency Profiler:** Integrated tool to measure the performance impact of the application.
+*   **Guided Calibration Wizard:** Launches on startup (configurable) to collect slow and fast motion profiles and auto-tune the smoothing curve.
+*   **Process Blacklist:** Monitors the foreground process and automatically pauses smoothing whenever a protected executable (e.g., `valorant.exe`) is detected.
 
 ### Planned (Roadmap)
 
-*   **Guided Calibration Wizard:** A UI to help the user find the ideal settings automatically.
 *   **Real-Time Control Panel:** A GUI to adjust smoothing parameters and visualize the mouse response graph.
-*   **Process Blacklist:** Prevent the application from working with specific games that may have restrictive anti-cheat policies.
 *   **System Tray Integration and Start with Windows.**
 *   **Packaging as a standalone executable.**
 
@@ -67,15 +67,14 @@ The application will run in the background. You can use the `Ctrl+Alt+S` hotkey 
 
 ## Configuration
 
-You can customize the smoothing parameters by editing the `config/defaults.json` file. The key parameters are found in the `smoothing_params` and `tremor_params` objects:
+You can customize the behaviour of AimSmoother by editing the `config/defaults.json` file:
 
-*   **`tremor_params`:**
-    *   `jitter_deadzone_px`: The radius (in pixels) within which slow movements are considered jitter and ignored.
-    *   `jitter_speed_max`: The maximum speed for a movement to be considered for the deadzone.
-    *   `extra_damp_factor`: The amount of extra damping to apply to very slow movements.
-*   **`smoothing_params`:**
-    *   `v_min`, `v_max`: The speed range (in pixels/second) used to determine the smoothing factor. Movements slower than `v_min` get maximum smoothing, and movements faster than `v_max` get minimum smoothing.
-    *   `alpha_min`, `alpha_max`: The minimum and maximum smoothing factors (alpha). A lower alpha means more smoothing. `alpha_max` should be close to 1.0 to allow for fast, unfiltered movements.
+*   **Smoothing:** `v_min`, `v_max`, `alpha_min`, `alpha_max` control how the adaptive EMA reacts to mouse speed.
+*   **Tremor Guard:** `jitter_deadzone_px`, `jitter_speed_max`, `extra_damp_factor` define the jitter rejection and additional damping.
+*   **Calibration:** `run_calibration_on_start` toggles the guided wizard. `calibration_slow_duration_sec` and `calibration_fast_duration_sec` set the duration (in seconds) of each phase.
+*   **Hotkeys:** `hotkey_toggle` and `hotkey_quit` customise the global shortcuts.
+*   **Process Blacklist:** Populate the `blacklist` array with executable names (e.g., `"valorant.exe"`) to pause smoothing automatically whenever those processes are in the foreground.
+*   **Misc:** `enabled_on_start`, `magic_number`, and `profiler_log_interval_sec` adjust startup defaults and diagnostics.
 
 ## Roadmap
 

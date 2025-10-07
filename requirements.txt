@@ -1,1 +1,2 @@
-# Para o MVP, não há dependências externas.
+psutil>=5.9
+pywin32>=306

@@ -9,6 +9,10 @@
   "enabled_on_start": true,
   "hotkey_toggle": "F10",
   "hotkey_quit": "F12",
+  "run_calibration_on_start": true,
+  "calibration_slow_duration_sec": 5.0,
+  "calibration_fast_duration_sec": 4.0,
+  "blacklist": ["valorant.exe"],
   "magic_number": 65535,
   "profiler_log_interval_sec": 5.0
 }
