@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from .calibration_ui import CalibrationWindow
 from .smoothing import AdaptiveEMA, LinearEMAParams
-from .win_hook import HookEngine
+
+if TYPE_CHECKING:
+    from .win_hook import HookEngine
 
 
 class CalibrationCollector:
