@@ -4,13 +4,10 @@ import sys
 import threading
 import time
 from pathlib import Path
-from ctypes import wintypes, byref
 
-# Importa todos os nossos módulos
+# Importa todos os nossos módulos multiplataforma
 from .smoothing import AdaptiveEMA, LinearEMAParams
 from .tremor import TremorGuard, TremorParams
-from .win_hook import HookEngine
-from .hotkeys import Hotkeys, ID_TOGGLE_HOTKEY, ID_QUIT_HOTKEY
 from .profiler import LatencyProfiler
 from .calibration import run_calibration
 
@@ -60,8 +57,28 @@ def load_cfg() -> dict:
         print("Erro: Arquivo de configuração 'defaults.json' está mal formatado.")
         sys.exit(1)
 
+def _ensure_windows_platform() -> None:
+    """Garante que o aplicativo está sendo executado no Windows."""
+    if sys.platform != "win32" or not hasattr(ctypes, "windll"):
+        detected = sys.platform
+        print(
+            "AimSmoother só está disponível no Windows. "
+            f"Plataforma detectada: {detected}."
+        )
+        sys.exit(1)
+
+
 def main():
     """Ponto de entrada principal do aplicativo."""
+    _ensure_windows_platform()
+
+    from ctypes import byref, wintypes
+
+    # Importações específicas do Windows são atrasadas para passar pelo
+    # cheque de plataforma antes de acessar ctypes.windll.
+    from .hotkeys import Hotkeys, ID_TOGGLE_HOTKEY, ID_QUIT_HOTKEY
+    from .win_hook import HookEngine
+
     print("Iniciando o Suavizador de Mira (usando ctypes)...")
     cfg = load_cfg()
 
